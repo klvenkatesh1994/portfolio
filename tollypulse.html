@@ -17,13 +17,23 @@
 </head>
 <body>
     <header class="fixed top-0 w-full z-50 px-8 py-6 bg-black/80 backdrop-blur-md flex justify-between items-center border-b border-white/5">
-        <h1 class="text-2xl font-black uppercase tracking-tighter">Tolly<span class="text-cyan-400">Pulse</span></h1>
-        <div id="status" class="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-2">
-            <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            Visual Feed Live
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-black uppercase tracking-tighter">Tolly<span class="text-cyan-400">Pulse</span></h1>
+            <div id="status" class="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <input type="text" id="movieSearch" placeholder="Search Movies/Actors..." class="bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs focus:outline-none focus:border-cyan-400 transition-all w-40 md:w-64">
+            <div class="flex gap-2 bg-white/5 p-1 rounded-full border border-white/10">
+                <button onclick="filterCards('all')" class="filter-btn active px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">All</button>
+                <button onclick="filterCards('collection')" class="filter-btn px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">Trade</button>
+                <button onclick="filterCards('gossip')" class="filter-btn px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">Gossip</button>
+            </div>
         </div>
     </header>
 
@@ -56,17 +66,41 @@
             }
         }
 
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        function filterCards(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('bg-cyan-400', btn.innerText.toLowerCase() === type || (btn.innerText === 'All' && type === 'all'));
+                btn.classList.toggle('text-black', btn.innerText.toLowerCase() === type || (btn.innerText === 'All' && type === 'all'));
+            });
+            initFirehose();
+        }
+
+        document.getElementById('movieSearch').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            initFirehose();
+        });
+
         async function initFirehose() {
             try {
-                const { data: movies } = await supabaseClient.from('tollypulse_movies').select('*');
-                const { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+                let { data: movies } = await supabaseClient.from('tollypulse_movies').select('*');
+                let { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+
+                if (currentFilter !== 'all') {
+                    cards = cards.filter(c => c.card_type === currentFilter);
+                }
 
                 const container = document.getElementById('firehose');
                 container.innerHTML = '';
 
                 movies.forEach(movie => {
                     const movieCards = cards.filter(c => c.movie_id === movie.id);
-                    if (movieCards.length === 0) return;
+                    const matchesSearch = movie.title.toLowerCase().includes(searchQuery) || 
+                                         (movie.cast_members && movie.cast_members.some(c => c.toLowerCase().includes(searchQuery)));
+                    
+                    if (movieCards.length === 0 || (searchQuery && !matchesSearch)) return;
 
                     const section = document.createElement('section');
                     section.className = 'space-y-6';
