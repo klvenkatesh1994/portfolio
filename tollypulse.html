@@ -29,18 +29,28 @@
     <script>
         const SUPABASE_URL = "https://qwcoxloagqjmlfzcugen.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hvT_1U0NpUbueTuf122F_w_wM4pgmVk";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Correct initialization for the browser bundle
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function initFirehose() {
-            const { data: movies } = await supabase.from('tollypulse_movies').select('*').order('hype_score', { ascending: false });
-            const { data: cards } = await supabase.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+            try {
+                const { data: movies, error: movieError } = await supabaseClient.from('tollypulse_movies').select('*').order('hype_score', { ascending: false });
+                const { data: cards, error: cardError } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
 
-            const container = document.getElementById('firehose');
-            container.innerHTML = '';
+                if (movieError || cardError) {
+                    console.error("Supabase Error:", movieError || cardError);
+                    document.getElementById('firehose').innerHTML = `<div class="text-red-500 text-center">Failed to load data. Please check console.</div>`;
+                    return;
+                }
 
-            movies.forEach(movie => {
-                const movieCards = cards.filter(c => c.movie_id === movie.id);
-                if (movieCards.length === 0) return;
+                const container = document.getElementById('firehose');
+                container.innerHTML = '';
+
+                if (!movies || movies.length === 0) {
+                    container.innerHTML = '<div class="text-center opacity-50">No movies found in database.</div>';
+                    return;
+                }
 
                 const row = document.createElement('section');
                 row.className = 'space-y-4';
@@ -80,10 +90,10 @@
         }
 
         // Real-time subscription
-        supabase.channel('custom-all-channel')
+        supabaseClient.channel('custom-all-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tollypulse_cards' }, (payload) => {
                 console.log('Change received!', payload);
-                initFirehose(); // Refresh UI on any DB change
+                initFirehose(); 
             })
             .subscribe();
 
