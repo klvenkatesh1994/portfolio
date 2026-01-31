@@ -108,6 +108,32 @@
             background: var(--accent-blue);
         }
 
+        .chip {
+            flex: 0 0 auto;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .active-chip {
+            background: white;
+            color: black;
+            border-color: white;
+        }
+
+        .status-link.active-status {
+            opacity: 1;
+            font-weight: 800;
+            border-bottom: 2px solid white;
+        }
+
         .gossip-tag { background: #bf5af2; }
         .collection-tag { background: #30d158; }
         .news-tag { background: #0a84ff; }
@@ -124,22 +150,37 @@
 </head>
 <body>
 
-    <!-- Apple Navbar -->
-    <nav class="sf-header fixed top-0 w-full z-[100] px-8 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-10">
-            <h1 class="text-xl font-bold tracking-tight cursor-pointer">Tolly<span class="font-light opacity-70">Pulse</span></h1>
-            <div class="hidden md:flex gap-8 text-[12px] font-medium opacity-60">
-                <a href="#" class="hover:opacity-100 transition">Movies</a>
-                <a href="#" class="hover:opacity-100 transition">Trade</a>
-                <a href="#" class="hover:opacity-100 transition">Gossip</a>
-                <a href="#" class="hover:opacity-100 transition">Upcoming</a>
+    <nav class="sf-header fixed top-0 w-full z-[100] px-8 py-4 flex flex-col gap-4">
+        <div class="flex justify-between items-center w-full">
+            <div class="flex items-center gap-10">
+                <h1 class="text-xl font-bold tracking-tight cursor-pointer" onclick="location.reload()">Tolly<span class="font-light opacity-70">Pulse</span></h1>
+                <div class="hidden md:flex gap-8 text-[12px] font-medium opacity-60">
+                    <button onclick="setStatusFilter('all')" id="status-all" class="status-link active-status hover:opacity-100 transition">Everything</button>
+                    <button onclick="setStatusFilter('pre-production')" id="status-upcoming" class="status-link hover:opacity-100 transition">Upcoming</button>
+                    <button onclick="setStatusFilter('released')" id="status-released" class="status-link hover:opacity-100 transition">Released</button>
+                </div>
             </div>
+        <div class="flex items-center gap-4">
+            <div class="relative flex items-center">
+                <div class="absolute left-3 text-cyan-400 opacity-50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="movieSearch" placeholder="Ask AI: 'Prabhas action' or 'latest gossip'..." class="bg-white/10 border-none rounded-xl pl-10 pr-12 py-2 text-xs focus:ring-1 focus:ring-cyan-500 w-48 md:w-80 transition-all outline-none">
+                <div id="aiToggle" onclick="toggleAI()" class="absolute right-2 p-1.5 rounded-lg cursor-pointer hover:bg-white/10 transition-all text-slate-500">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L14.85 8.65L22 9.25L16.5 13.9L18.1 21L12 17.25L5.9 21L7.5 13.9L2 9.25L9.15 8.65L12 2Z"/></svg>
+                </div>
+            </div>
+            <button class="bg-white text-black px-4 py-2 rounded-full text-[11px] font-bold shadow-xl shadow-white/5">Get Pro</button>
         </div>
-        <div class="flex items-center gap-6">
-            <div class="relative">
-                <input type="text" id="movieSearch" placeholder="Search" class="bg-white/10 border-none rounded-md px-4 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 w-40 transition-all focus:w-60 outline-none">
-            </div>
-            <button class="bg-white text-black px-4 py-1.5 rounded-full text-[11px] font-bold">Get Pro</button>
+        </div>
+        
+        <!-- Dynamic Category Chips -->
+        <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2" id="categoryChips">
+            <button onclick="setCategoryFilter('all')" class="category-chip chip active-chip">All Updates</button>
+            <button onclick="setCategoryFilter('gossip')" class="category-chip chip">Gossip</button>
+            <button onclick="setCategoryFilter('collection')" class="category-chip chip">Trade Talk</button>
+            <button onclick="setCategoryFilter('media')" class="category-chip chip">Trailers & Songs</button>
+            <button onclick="setCategoryFilter('news')" class="category-chip chip">General News</button>
         </div>
     </nav>
 
@@ -173,43 +214,136 @@
         const SUPABASE_KEY = "sb_publishable_hvT_1U0NpUbueTuf122F_w_wM4pgmVk";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let currentCategory = 'all';
+        let currentStatus = 'all';
+        let searchQuery = '';
+        let isAIMode = false;
+
+        function toggleAI() {
+            isAIMode = !isAIMode;
+            const btn = document.getElementById('aiToggle');
+            const input = document.getElementById('movieSearch');
+            
+            if (isAIMode) {
+                btn.classList.add('text-cyan-400', 'drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+                input.placeholder = "AI Magic: Try 'High budget' or 'trending'...";
+                input.classList.add('ring-1', 'ring-cyan-500/50');
+            } else {
+                btn.classList.remove('text-cyan-400', 'drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]');
+                input.placeholder = "Search Movies/Actors...";
+                input.classList.remove('ring-1', 'ring-cyan-500/50');
+            }
+            initApp();
+        }
+
+        function setCategoryFilter(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-chip').forEach(btn => {
+                const btnCat = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                btn.classList.toggle('active-chip', btnCat === cat);
+            });
+            initApp();
+        }
+
+        function setStatusFilter(status) {
+            currentStatus = status;
+            document.querySelectorAll('.status-link').forEach(btn => {
+                btn.classList.toggle('active-status', btn.getAttribute('onclick').includes(`'${status}'`));
+            });
+            initApp();
+        }
+
+        document.getElementById('movieSearch').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            initApp();
+        });
+
         async function initApp() {
-            const { data: movies } = await supabaseClient.from('tollypulse_movies').select('*');
-            const { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+            let { data: movies } = await supabaseClient.from('tollypulse_movies').select('*').order('release_date', { ascending: false, nullsFirst: false });
+            let { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
 
             if (!movies || movies.length === 0) return;
 
-            // Set Hero Content
-            const featured = movies.find(m => m.title === 'Spirit') || movies[0];
-            document.getElementById('hero').style.backgroundImage = `url('${featured.poster_url || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf'}')`;
-            document.getElementById('heroTitle').innerText = featured.title;
-            document.getElementById('heroDesc').innerText = `Now tracking ${cards.filter(c => c.movie_id === featured.id).length} live updates for ${featured.title}. Directed by ${featured.director || 'Visionary Filmmakers'}.`;
+            // Apply Status Filter
+            if (currentStatus !== 'all') {
+                movies = movies.filter(m => m.status === currentStatus);
+            }
+
+            // Apply Category Filter to Cards
+            let filteredCards = cards;
+            if (currentCategory !== 'all') {
+                filteredCards = cards.filter(c => c.card_type === currentCategory);
+            }
+
+            // Apply Search & AI Logic
+            if (searchQuery) {
+                if (isAIMode) {
+                    // AI Semantic-ish matching (expanding query)
+                    const keywords = {
+                        'prabhas': ['rebel star', 'darling', 'salaar', 'kalki', 'spirit', 'raja saab'],
+                        'action': ['high budget', 'mass', 'fight', 'stunt', 'adventure', 'pan-india'],
+                        'gossip': ['rumor', 'inside talk', 'leaked', 'exclusive'],
+                        'mahesh': ['ssmb29', 'guntur kaaram', 'superstar']
+                    };
+                    
+                    movies = movies.filter(m => {
+                        const content = (m.title + ' ' + (m.director || '') + ' ' + (m.cast_members || []).join(' ')).toLowerCase();
+                        let score = content.includes(searchQuery) ? 5 : 0;
+                        
+                        // Semantic expand
+                        for (let key in keywords) {
+                            if (searchQuery.includes(key)) {
+                                if (keywords[key].some(k => content.includes(k))) score += 3;
+                            }
+                        }
+                        return score > 0;
+                    });
+                } else {
+                    // Normal search
+                    movies = movies.filter(m => m.title.toLowerCase().includes(searchQuery) || (m.cast_members && m.cast_members.some(c => c.toLowerCase().includes(searchQuery))));
+                }
+            }
+
+            // Set Hero Content (always show Spirit or latest if no search)
+            if (!searchQuery && currentCategory === 'all') {
+                const featured = movies.find(m => m.title === 'Spirit') || movies[0];
+                if (featured) {
+                    document.getElementById('hero').style.backgroundImage = `url('${featured.poster_url || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf'}')`;
+                    document.getElementById('heroTitle').innerText = featured.title;
+                    document.getElementById('heroDesc').innerText = `Now tracking ${cards.filter(c => c.movie_id === featured.id).length} live updates for ${featured.title}. Directed by ${featured.director || 'Visionary Filmmakers'}.`;
+                }
+            }
 
             const main = document.getElementById('shelves');
             main.innerHTML = '';
 
-            // Section 1: The Posters Shelf (Prime Video style)
-            const topMovies = movies.filter(m => m.poster_url).slice(0, 15);
-            const posterSection = document.createElement('div');
-            posterSection.className = 'shelf-container';
-            posterSection.innerHTML = `
-                <h3 class="text-xl font-bold mb-6 tracking-tight">Top Tracked Movies</h3>
-                <div class="shelf">
-                    ${topMovies.map(m => `<img src="${m.poster_url}" class="poster-shelf-item" onclick="document.getElementById('movieSearch').value='${m.title}'; search();" />`).join('')}
-                </div>
-            `;
-            main.appendChild(posterSection);
+            // Section 1: The Posters Shelf (only if everything filter is on)
+            if (currentCategory === 'all' && !searchQuery) {
+                const topMovies = movies.filter(m => m.poster_url).slice(0, 15);
+                const posterSection = document.createElement('div');
+                posterSection.className = 'shelf-container';
+                posterSection.innerHTML = `
+                    <h3 class="text-xl font-bold mb-6 tracking-tight">Top Tracked Movies</h3>
+                    <div class="shelf">
+                        ${topMovies.map(m => `<img src="${m.poster_url}" class="poster-shelf-item" onclick="document.getElementById('movieSearch').value='${m.title}'; searchQuery='${m.title.toLowerCase()}'; initApp();" />`).join('')}
+                    </div>
+                `;
+                main.appendChild(posterSection);
+            }
 
-            // Section 2: The Firehose (Apple Card style)
+            // Section 2: The Firehose
             movies.forEach(movie => {
-                const movieCards = cards.filter(c => c.movie_id === movie.id);
+                const movieCards = filteredCards.filter(c => c.movie_id === movie.id);
                 if (movieCards.length === 0) return;
 
                 const section = document.createElement('div');
-                section.className = 'shelf-container';
+                section.className = 'shelf-container fade-in';
                 section.innerHTML = `
                     <div class="flex justify-between items-end mb-6">
-                        <h3 class="text-2xl font-extrabold tracking-tight">${movie.title.toUpperCase()}</h3>
+                        <div class="flex items-center gap-4">
+                            ${movie.poster_url ? `<img src="${movie.poster_url}" class="w-8 h-10 rounded-md object-cover border border-white/10" />` : ''}
+                            <h3 class="text-2xl font-extrabold tracking-tight">${movie.title.toUpperCase()}</h3>
+                        </div>
                         <span class="text-[10px] font-bold opacity-40 uppercase tracking-widest">${movie.status}</span>
                     </div>
                     <div class="shelf">
@@ -220,12 +354,15 @@
                                     <span class="text-[9px] font-bold opacity-30 uppercase">${card.source_platform}</span>
                                 </div>
                                 
-                                ${card.media_url ? `<img src="${card.media_url}" class="w-full h-32 rounded-xl object-cover mb-4 shadow-lg" />` : ''}
+                                ${card.media_url ? `<img src="${card.media_url}" class="w-full h-32 rounded-xl object-cover mb-4 shadow-lg" onerror="this.style.display='none'" />` : ''}
                                 
                                 <p class="text-[15px] font-semibold leading-tight text-white/90 line-clamp-3 mb-4">${card.headline}</p>
                                 
                                 <div class="mt-auto pt-4 border-t border-white/5 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
-                                    <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-amber-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1.5 h-1.5 rounded-full ${card.sentiment_score > 0.7 ? 'bg-green-500' : 'bg-amber-500'}"></div>
+                                        <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-amber-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
+                                    </div>
                                     <span class="opacity-30">${timeAgo(card.published_at)}</span>
                                 </div>
                             </div>
@@ -234,6 +371,10 @@
                 `;
                 main.appendChild(section);
             });
+
+            if (main.innerHTML === '') {
+                main.innerHTML = '<div class="py-40 text-center opacity-30 uppercase text-xs font-bold tracking-widest">No matching updates found</div>';
+            }
         }
 
         function getTagClass(type) {
