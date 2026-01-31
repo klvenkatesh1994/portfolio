@@ -3,145 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TollyPulse | TFI Banisa Visuals</title>
+    <title>TollyPulse | The Future of Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
-        body { font-family: 'Outfit', sans-serif; background-color: #050505; color: white; }
-        .neo-glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .movie-poster { width: 45px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
-        .card-preview { width: 100%; height: 100px; border-radius: 12px; object-fit: cover; margin-bottom: 12px; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;400;600;800&family=Outfit:wght@300;500;700;900&display=swap');
+        
+        :root {
+            --apple-black: #000000;
+            --apple-gray: #1c1c1e;
+            --accent-blue: #0071e3;
+            --glass: rgba(28, 28, 30, 0.7);
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--apple-black); 
+            color: #f5f5f7;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .sf-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Prime Video Style Hero */
+        .hero-banner {
+            height: 80vh;
+            background-size: cover;
+            background-position: center 20%;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 100px;
+            transition: background-image 0.8s ease-in-out;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, var(--apple-black) 5%, transparent 60%),
+                        linear-gradient(to right, var(--apple-black) 0%, transparent 50%);
+        }
+
+        /* Apple Style Glass Cards */
+        .apple-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .apple-card:hover {
+            transform: scale(1.03);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Prime Video Shelf Scroll */
+        .shelf {
+            display: flex;
+            overflow-x: auto;
+            gap: 20px;
+            padding: 10px 0 30px 0;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .shelf::-webkit-scrollbar { display: none; }
+
+        .shelf-container {
+            padding: 0 4%;
+            margin-bottom: 40px;
+        }
+
+        .poster-shelf-item {
+            flex: 0 0 180px;
+            height: 260px;
+            border-radius: 12px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .poster-shelf-item:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+
+        .tag {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 10px;
+            border-radius: 100px;
+            background: var(--accent-blue);
+        }
+
+        .gossip-tag { background: #bf5af2; }
+        .collection-tag { background: #30d158; }
+        .news-tag { background: #0a84ff; }
+
+        .fade-in {
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
-    <header class="fixed top-0 w-full z-50 px-8 py-6 bg-black/80 backdrop-blur-md flex justify-between items-center border-b border-white/5">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-black uppercase tracking-tighter">Tolly<span class="text-cyan-400">Pulse</span></h1>
-            <div id="status" class="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-2">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Live
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <input type="text" id="movieSearch" placeholder="Search Movies/Actors..." class="bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs focus:outline-none focus:border-cyan-400 transition-all w-40 md:w-64">
-            <div class="flex gap-2 bg-white/5 p-1 rounded-full border border-white/10">
-                <button onclick="filterCards('all')" class="filter-btn active px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">All</button>
-                <button onclick="filterCards('collection')" class="filter-btn px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">Trade</button>
-                <button onclick="filterCards('gossip')" class="filter-btn px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all">Gossip</button>
-            </div>
-        </div>
-    </header>
 
-    <main id="firehose" class="pt-32 px-6 space-y-16 pb-40">
-        <div class="flex justify-center items-center h-64">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+    <!-- Apple Navbar -->
+    <nav class="sf-header fixed top-0 w-full z-[100] px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-10">
+            <h1 class="text-xl font-bold tracking-tight cursor-pointer">Tolly<span class="font-light opacity-70">Pulse</span></h1>
+            <div class="hidden md:flex gap-8 text-[12px] font-medium opacity-60">
+                <a href="#" class="hover:opacity-100 transition">Movies</a>
+                <a href="#" class="hover:opacity-100 transition">Trade</a>
+                <a href="#" class="hover:opacity-100 transition">Gossip</a>
+                <a href="#" class="hover:opacity-100 transition">Upcoming</a>
+            </div>
         </div>
+        <div class="flex items-center gap-6">
+            <div class="relative">
+                <input type="text" id="movieSearch" placeholder="Search" class="bg-white/10 border-none rounded-md px-4 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 w-40 transition-all focus:w-60 outline-none">
+            </div>
+            <button class="bg-white text-black px-4 py-1.5 rounded-full text-[11px] font-bold">Get Pro</button>
+        </div>
+    </nav>
+
+    <!-- Prime Video Style Hero Section -->
+    <section id="hero" class="hero-banner fade-in">
+        <div class="hero-overlay"></div>
+        <div class="relative z-10 px-[4%] max-w-4xl">
+            <span class="tag mb-4 inline-block">Trending #1</span>
+            <h2 id="heroTitle" class="text-6xl md:text-8xl font-black italic tracking-tighter mb-4 uppercase">...</h2>
+            <p id="heroDesc" class="text-lg text-slate-300 mb-8 max-w-2xl font-medium leading-relaxed opacity-80"></p>
+            <div class="flex gap-4">
+                <button class="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-slate-200 transition flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch Latest Update
+                </button>
+                <button class="bg-white/10 backdrop-blur-md border border-white/10 px-8 py-3 rounded-xl font-bold hover:bg-white/20 transition">Movie Details</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Shelves -->
+    <main id="shelves" class="relative z-20 -mt-20">
+        <!-- Movies and Cards will be dynamically injected here -->
     </main>
+
+    <footer class="py-20 text-center opacity-30 text-xs font-medium tracking-widest uppercase">
+        &copy; 2026 TollyPulse Engine · Built for TFI Banisa
+    </footer>
 
     <script>
         const SUPABASE_URL = "https://qwcoxloagqjmlfzcugen.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hvT_1U0NpUbueTuf122F_w_wM4pgmVk";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function getPlatformIcon(platform) {
-            const p = platform.toLowerCase();
-            if (p.includes('youtube')) return '🔴 YT';
-            if (p.includes('twitter') || p.includes('x')) return '🐦 X';
-            return '🌐 Web';
-        }
+        async function initApp() {
+            const { data: movies } = await supabaseClient.from('tollypulse_movies').select('*');
+            const { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
 
-        function getBorderColor(type) {
-            switch(type) {
-                case 'collection': return 'border-cyan-500';
-                case 'gossip': return 'border-purple-500';
-                case 'news': return 'border-blue-500';
-                case 'media': return 'border-red-500';
-                case 'social': return 'border-sky-400';
-                default: return 'border-slate-700';
-            }
-        }
+            if (!movies || movies.length === 0) return;
 
-        let currentFilter = 'all';
-        let searchQuery = '';
+            // Set Hero Content
+            const featured = movies.find(m => m.title === 'Spirit') || movies[0];
+            document.getElementById('hero').style.backgroundImage = `url('${featured.poster_url || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf'}')`;
+            document.getElementById('heroTitle').innerText = featured.title;
+            document.getElementById('heroDesc').innerText = `Now tracking ${cards.filter(c => c.movie_id === featured.id).length} live updates for ${featured.title}. Directed by ${featured.director || 'Visionary Filmmakers'}.`;
 
-        function filterCards(type) {
-            currentFilter = type;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.toggle('bg-cyan-400', btn.innerText.toLowerCase() === type || (btn.innerText === 'All' && type === 'all'));
-                btn.classList.toggle('text-black', btn.innerText.toLowerCase() === type || (btn.innerText === 'All' && type === 'all'));
-            });
-            initFirehose();
-        }
+            const main = document.getElementById('shelves');
+            main.innerHTML = '';
 
-        document.getElementById('movieSearch').addEventListener('input', (e) => {
-            searchQuery = e.target.value.toLowerCase();
-            initFirehose();
-        });
+            // Section 1: The Posters Shelf (Prime Video style)
+            const topMovies = movies.filter(m => m.poster_url).slice(0, 15);
+            const posterSection = document.createElement('div');
+            posterSection.className = 'shelf-container';
+            posterSection.innerHTML = `
+                <h3 class="text-xl font-bold mb-6 tracking-tight">Top Tracked Movies</h3>
+                <div class="shelf">
+                    ${topMovies.map(m => `<img src="${m.poster_url}" class="poster-shelf-item" onclick="document.getElementById('movieSearch').value='${m.title}'; search();" />`).join('')}
+                </div>
+            `;
+            main.appendChild(posterSection);
 
-        async function initFirehose() {
-            try {
-                let { data: movies } = await supabaseClient.from('tollypulse_movies').select('*');
-                let { data: cards } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+            // Section 2: The Firehose (Apple Card style)
+            movies.forEach(movie => {
+                const movieCards = cards.filter(c => c.movie_id === movie.id);
+                if (movieCards.length === 0) return;
 
-                if (currentFilter !== 'all') {
-                    cards = cards.filter(c => c.card_type === currentFilter);
-                }
-
-                const container = document.getElementById('firehose');
-                container.innerHTML = '';
-
-                movies.forEach(movie => {
-                    const movieCards = cards.filter(c => c.movie_id === movie.id);
-                    const matchesSearch = movie.title.toLowerCase().includes(searchQuery) || 
-                                         (movie.cast_members && movie.cast_members.some(c => c.toLowerCase().includes(searchQuery)));
-                    
-                    if (movieCards.length === 0 || (searchQuery && !matchesSearch)) return;
-
-                    const section = document.createElement('section');
-                    section.className = 'space-y-6';
-                    section.innerHTML = `
-                        <div class="flex items-center gap-4 px-2">
-                            ${movie.poster_url ? `<img src="${movie.poster_url}" class="movie-poster" onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=300&auto=format&fit=crop'; this.onerror=null;" />` : '<div class="movie-poster bg-slate-800 flex items-center justify-center text-[8px] font-bold">NO POSTER</div>'}
-                            <div>
-                                <h2 class="text-4xl font-black italic tracking-tighter uppercase leading-none">${movie.title}</h2>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-2">${movie.status} · ${movieCards.length} LIVE UPDATES</p>
-                            </div>
-                        </div>
-                        <div class="flex overflow-x-auto gap-6 no-scrollbar pb-4 snap-x">
-                            ${movieCards.map(card => `
-                                <div onclick="if('${card.source_url}') window.open('${card.source_url}', '_blank')" class="snap-start flex-shrink-0 w-80 h-auto min-h-[220px] neo-glass rounded-[2rem] p-6 border-l-4 ${getBorderColor(card.card_type)} flex flex-col hover:scale-[1.02] transition-all cursor-pointer">
-                                    <div class="flex justify-between items-start mb-4">
-                                        <span class="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">${card.card_type}</span>
-                                        <span class="px-2 py-1 rounded-md bg-white/5 text-[8px] font-bold uppercase tracking-widest opacity-60 text-cyan-400">${getPlatformIcon(card.source_platform)}</span>
-                                    </div>
-                                    
-                                    ${card.media_url ? `<img src="${card.media_url}" class="card-preview" onerror="this.src='https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=500&auto=format&fit=crop'; this.onerror=null;" />` : ''}
-                                    
-                                    <p class="text-sm font-bold leading-tight mb-6 line-clamp-3">${card.headline}</p>
-                                    
-                                    <div class="mt-auto flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
-                                        <div class="flex items-center gap-2">
-                                            <div class="w-1.5 h-1.5 rounded-full ${card.sentiment_score > 0.7 ? 'bg-green-500' : 'bg-amber-500'}"></div>
-                                            <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-amber-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
-                                        </div>
-                                        <span class="opacity-30">${new Date(card.published_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                    </div>
+                const section = document.createElement('div');
+                section.className = 'shelf-container';
+                section.innerHTML = `
+                    <div class="flex justify-between items-end mb-6">
+                        <h3 class="text-2xl font-extrabold tracking-tight">${movie.title.toUpperCase()}</h3>
+                        <span class="text-[10px] font-bold opacity-40 uppercase tracking-widest">${movie.status}</span>
+                    </div>
+                    <div class="shelf">
+                        ${movieCards.map(card => `
+                            <div onclick="if('${card.source_url}') window.open('${card.source_url}', '_blank')" class="apple-card flex-shrink-0 w-80 h-auto min-h-[220px] p-6 flex flex-col cursor-pointer">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="tag ${getTagClass(card.card_type)}">${card.card_type}</span>
+                                    <span class="text-[9px] font-bold opacity-30 uppercase">${card.source_platform}</span>
                                 </div>
-                            `).join('')}
-                        </div>
-                    `;
-                    container.appendChild(section);
-                });
-            } catch (e) { console.error(e); }
+                                
+                                ${card.media_url ? `<img src="${card.media_url}" class="w-full h-32 rounded-xl object-cover mb-4 shadow-lg" />` : ''}
+                                
+                                <p class="text-[15px] font-semibold leading-tight text-white/90 line-clamp-3 mb-4">${card.headline}</p>
+                                
+                                <div class="mt-auto pt-4 border-t border-white/5 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
+                                    <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-amber-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
+                                    <span class="opacity-30">${timeAgo(card.published_at)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                main.appendChild(section);
+            });
         }
 
-        supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'tollypulse_cards' }, () => initFirehose()).subscribe();
-        initFirehose();
+        function getTagClass(type) {
+            if (type === 'gossip') return 'gossip-tag';
+            if (type === 'collection') return 'collection-tag';
+            return 'news-tag';
+        }
+
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+            if (seconds < 60) return "Just now";
+            const mins = Math.floor(seconds / 60);
+            if (mins < 60) return mins + "m ago";
+            return Math.floor(mins / 60) + "h ago";
+        }
+
+        supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'tollypulse_cards' }, () => initApp()).subscribe();
+        initApp();
     </script>
 </body>
 </html>
