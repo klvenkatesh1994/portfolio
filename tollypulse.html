@@ -16,41 +16,60 @@
 <body>
     <header class="fixed top-0 w-full z-50 px-8 py-6 bg-black/80 backdrop-blur-md flex justify-between items-center border-b border-white/5">
         <h1 class="text-2xl font-black uppercase tracking-tighter">Tolly<span class="text-cyan-400">Pulse</span></h1>
-        <div id="status" class="text-[10px] font-bold text-green-500 uppercase tracking-widest">● Live Feed Connected</div>
+        <div id="status" class="text-[10px] font-bold text-red-500 uppercase tracking-widest">● Disconnected</div>
     </header>
 
     <main id="firehose" class="pt-32 px-6 space-y-12 pb-40">
-        <!-- Movies and Cards will be injected here -->
-        <div class="flex justify-center items-center h-64">
+        <div id="debug" class="text-[10px] text-slate-500 font-mono mb-4 text-center opacity-50 uppercase tracking-widest">Initializing Client...</div>
+        <div id="loader" class="flex justify-center items-center h-64">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
         </div>
     </main>
 
     <script>
+        const debug = (msg) => {
+            console.log(msg);
+            document.getElementById('debug').innerText = msg;
+        };
+
         const SUPABASE_URL = "https://qwcoxloagqjmlfzcugen.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hvT_1U0NpUbueTuf122F_w_wM4pgmVk";
         
-        // Correct initialization for the browser bundle
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        debug("Supabase Library Version: " + (typeof supabase !== 'undefined' ? "Loaded" : "Missing"));
+
+        let supabaseClient;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            debug("Client Created. Fetching Data...");
+            document.getElementById('status').innerText = "● Connecting to DB...";
+            document.getElementById('status').classList.remove('text-red-500');
+            document.getElementById('status').classList.add('text-amber-500');
+        } catch (e) {
+            debug("Client Init Error: " + e.message);
+        }
 
         async function initFirehose() {
             try {
+                debug("Fetching Movies...");
                 const { data: movies, error: movieError } = await supabaseClient.from('tollypulse_movies').select('*').order('hype_score', { ascending: false });
+                
+                if (movieError) {
+                    debug("Movie Error: " + movieError.message);
+                    return;
+                }
+
+                debug("Movies Found: " + movies.length + ". Fetching Cards...");
                 const { data: cards, error: cardError } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
 
-                if (movieError || cardError) {
-                    console.error("Supabase Error:", movieError || cardError);
-                    document.getElementById('firehose').innerHTML = `<div class="text-red-500 text-center">Failed to load data. Please check console.</div>`;
+                if (cardError) {
+                    debug("Card Error: " + cardError.message);
                     return;
                 }
 
-                const container = document.getElementById('firehose');
-                container.innerHTML = '';
-
-                if (!movies || movies.length === 0) {
-                    container.innerHTML = '<div class="text-center opacity-50">No movies found in database.</div>';
-                    return;
-                }
+                debug("Displaying Firehose...");
+                document.getElementById('status').innerText = "● Live Feed Connected";
+                document.getElementById('status').classList.remove('text-amber-500');
+                document.getElementById('status').classList.add('text-green-500');
 
                 const row = document.createElement('section');
                 row.className = 'space-y-4';
