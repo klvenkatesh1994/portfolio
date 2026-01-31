@@ -20,7 +20,7 @@
     </header>
 
     <main id="firehose" class="pt-32 px-6 space-y-12 pb-40">
-        <div id="debug" class="text-[10px] text-slate-500 font-mono mb-4 text-center opacity-50 uppercase tracking-widest">Initializing Client...</div>
+        <div id="debug" class="text-[10px] text-slate-500 font-mono mb-4 text-center opacity-50 uppercase tracking-widest">Initializing...</div>
         <div id="loader" class="flex justify-center items-center h-64">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
         </div>
@@ -35,67 +35,69 @@
         const SUPABASE_URL = "https://qwcoxloagqjmlfzcugen.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hvT_1U0NpUbueTuf122F_w_wM4pgmVk";
         
-        debug("Supabase Library Version: " + (typeof supabase !== 'undefined' ? "Loaded" : "Missing"));
-
         let supabaseClient;
         try {
             supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            debug("Client Created. Fetching Data...");
-            document.getElementById('status').innerText = "● Connecting to DB...";
-            document.getElementById('status').classList.remove('text-red-500');
-            document.getElementById('status').classList.add('text-amber-500');
+            debug("Connecting to TFI Pulse Engine...");
         } catch (e) {
-            debug("Client Init Error: " + e.message);
+            debug("Init Error: " + e.message);
         }
 
         async function initFirehose() {
             try {
-                debug("Fetching Movies...");
-                const { data: movies, error: movieError } = await supabaseClient.from('tollypulse_movies').select('*').order('hype_score', { ascending: false });
-                
-                if (movieError) {
-                    debug("Movie Error: " + movieError.message);
+                const { data: movies, error: movieError } = await supabaseClient.from('tollypulse_movies').select('*');
+                const { data: cards, error: cardError } = await supabaseClient.from('tollypulse_cards').select('*');
+
+                if (movieError || cardError) {
+                    debug("Sync Error: Check Connection");
                     return;
                 }
 
-                debug("Movies Found: " + movies.length + ". Fetching Cards...");
-                const { data: cards, error: cardError } = await supabaseClient.from('tollypulse_cards').select('*').order('published_at', { ascending: false });
+                const container = document.getElementById('firehose');
+                container.innerHTML = '<div id="debug" class="text-[10px] text-slate-500 font-mono mb-4 text-center opacity-50 uppercase tracking-widest">Live Sync Active</div>';
 
-                if (cardError) {
-                    debug("Card Error: " + cardError.message);
-                    return;
+                let rowCount = 0;
+                movies.forEach(movie => {
+                    const movieCards = cards.filter(c => c.movie_id === movie.id);
+                    if (movieCards.length === 0) return;
+                    rowCount++;
+
+                    const section = document.createElement('section');
+                    section.className = 'space-y-4';
+                    section.innerHTML = `
+                        <div class="flex justify-between items-end px-2">
+                            <h2 class="text-3xl font-black italic tracking-tighter">${movie.title.toUpperCase()}</h2>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">${movie.status}</span>
+                        </div>
+                        <div class="flex overflow-x-auto gap-4 no-scrollbar pb-4 snap-x">
+                            ${movieCards.map(card => `
+                                <div class="snap-start flex-shrink-0 w-80 h-48 neo-glass rounded-3xl p-6 border-l-4 ${getBorderColor(card.card_type)} flex flex-col justify-between">
+                                    <div class="flex justify-between items-start">
+                                        <span class="text-[8px] font-bold uppercase tracking-[0.2em] opacity-50">${card.card_type}</span>
+                                        <span class="text-[8px] font-bold uppercase opacity-30">${card.source_platform}</span>
+                                    </div>
+                                    <p class="text-sm font-semibold leading-snug line-clamp-3">${card.headline}</p>
+                                    <div class="flex justify-between items-center text-[8px] font-bold uppercase tracking-widest">
+                                        <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-slate-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
+                                        <span class="opacity-40">${new Date(card.published_at).toLocaleTimeString()}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    container.appendChild(section);
+                });
+
+                if (rowCount === 0) {
+                    container.innerHTML += '<div class="text-center py-20 text-slate-500 uppercase text-xs font-bold tracking-widest">Waiting for first firehose updates...</div>';
                 }
 
-                debug("Displaying Firehose...");
                 document.getElementById('status').innerText = "● Live Feed Connected";
-                document.getElementById('status').classList.remove('text-amber-500');
-                document.getElementById('status').classList.add('text-green-500');
+                document.getElementById('status').className = "text-[10px] font-bold text-green-500 uppercase tracking-widest";
 
-                const row = document.createElement('section');
-                row.className = 'space-y-4';
-                row.innerHTML = `
-                    <div class="flex justify-between items-end px-2">
-                        <h2 class="text-3xl font-black italic tracking-tighter">${movie.title.toUpperCase()}</h2>
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">${movie.status}</span>
-                    </div>
-                    <div class="flex overflow-x-auto gap-4 no-scrollbar pb-4 snap-x" id="cards-${movie.id}">
-                        ${movieCards.map(card => `
-                            <div class="snap-start flex-shrink-0 w-80 h-48 neo-glass rounded-3xl p-6 border-l-4 ${getBorderColor(card.card_type)} flex flex-col justify-between">
-                                <div class="flex justify-between items-start">
-                                    <span class="text-[8px] font-bold uppercase tracking-[0.2em] opacity-50">${card.card_type}</span>
-                                    <span class="text-[8px] font-bold uppercase opacity-30">${card.source_platform}</span>
-                                </div>
-                                <p class="text-sm font-semibold leading-snug line-clamp-3">${card.headline}</p>
-                                <div class="flex justify-between items-center text-[8px] font-bold uppercase tracking-widest">
-                                    <span class="${card.sentiment_score > 0.7 ? 'text-green-400' : 'text-slate-400'}">Talk: ${Math.round(card.sentiment_score * 100)}%</span>
-                                    <span class="opacity-40">${new Date(card.published_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                container.appendChild(row);
-            });
+            } catch (e) {
+                debug("Fatal Error: " + e.message);
+            }
         }
 
         function getBorderColor(type) {
@@ -108,14 +110,7 @@
             }
         }
 
-        // Real-time subscription
-        supabaseClient.channel('custom-all-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tollypulse_cards' }, (payload) => {
-                console.log('Change received!', payload);
-                initFirehose(); 
-            })
-            .subscribe();
-
+        supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'tollypulse_cards' }, () => initFirehose()).subscribe();
         initFirehose();
     </script>
 </body>
