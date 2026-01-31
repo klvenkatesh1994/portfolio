@@ -106,7 +106,7 @@
                     section.className = 'space-y-6';
                     section.innerHTML = `
                         <div class="flex items-center gap-4 px-2">
-                            ${movie.poster_url ? `<img src="${movie.poster_url}" class="movie-poster" />` : '<div class="movie-poster bg-slate-800 flex items-center justify-center text-[8px] font-bold">NO POSTER</div>'}
+                            ${movie.poster_url ? `<img src="${movie.poster_url}" class="movie-poster" onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=300&auto=format&fit=crop'; this.onerror=null;" />` : '<div class="movie-poster bg-slate-800 flex items-center justify-center text-[8px] font-bold">NO POSTER</div>'}
                             <div>
                                 <h2 class="text-4xl font-black italic tracking-tighter uppercase leading-none">${movie.title}</h2>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-2">${movie.status} · ${movieCards.length} LIVE UPDATES</p>
@@ -120,7 +120,7 @@
                                         <span class="px-2 py-1 rounded-md bg-white/5 text-[8px] font-bold uppercase tracking-widest opacity-60 text-cyan-400">${getPlatformIcon(card.source_platform)}</span>
                                     </div>
                                     
-                                    ${card.media_url ? `<img src="${card.media_url}" class="card-preview" onerror="this.style.display='none'" />` : ''}
+                                    ${card.media_url ? `<img src="${card.media_url}" class="card-preview" onerror="this.src='https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=500&auto=format&fit=crop'; this.onerror=null;" />` : ''}
                                     
                                     <p class="text-sm font-bold leading-tight mb-6 line-clamp-3">${card.headline}</p>
                                     
